@@ -5,9 +5,9 @@ import { useState } from "react";
 export default function Registro() {
   const [form, setForm] = useState({
     sellerId: "",
-    sellerName: "",
     name: "",
     dni: "",
+    edad: "",
     email: "",
     phone: "",
   });
@@ -39,9 +39,9 @@ export default function Registro() {
         // 🔄 Limpiar formulario
         setForm({
           sellerId: "",
-          sellerName: "",
           name: "",
           dni: "",
+          edad: "",
           email: "",
           phone: "",
         });
@@ -81,15 +81,6 @@ export default function Registro() {
             required
             className="border p-2 rounded text-black"
           />
-
-          <input
-            name="sellerName"
-            value={form.sellerName}
-            onChange={handleChange}
-            placeholder="Nombre Promotor"
-            required
-            className="border p-2 rounded text-black"
-          />
         </div>
 
         {/* 🟢 PARTICIPANTE */}
@@ -110,6 +101,15 @@ export default function Registro() {
             value={form.dni}
             onChange={handleChange}
             placeholder="DNI Participante"
+            required
+            className="border p-2 rounded text-black"
+          />
+
+          <input
+            name="edad"
+            value={form.edad}
+            onChange={handleChange}
+            placeholder="Edad"
             required
             className="border p-2 rounded text-black"
           />

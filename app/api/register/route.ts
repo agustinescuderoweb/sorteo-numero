@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/firebaseAdmin";
 import admin from "firebase-admin";
-import { Resend } from "resend";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 // 🔢 Generar número único
 async function generateUniqueNumber() {
@@ -30,10 +27,10 @@ async function generateUniqueNumber() {
 
 export async function POST(req: Request) {
   try {
-    const { sellerId, sellerName, name, dni, email, phone } =
-      await req.json();
 
-    if (!sellerId || !sellerName || !name || !dni) {
+    const { sellerId, name, dni, edad, email, phone } = await req.json();
+
+    if (!sellerId || !name || !dni || !edad) {
       return NextResponse.json({
         success: false,
         error: "Faltan datos obligatorios",
@@ -43,15 +40,16 @@ export async function POST(req: Request) {
     const promoterRef = db.collection("promoters").doc(sellerId);
     const promoterDoc = await promoterRef.get();
 
+    // 🧑‍💼 crear promotor si no existe
     if (!promoterDoc.exists) {
       await promoterRef.set({
-        name: sellerName,
         dni: sellerId,
         totalParticipants: 0,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
     }
 
+    // 📊 contar participantes
     const participantsSnapshot = await promoterRef
       .collection("participants")
       .get();
@@ -63,6 +61,7 @@ export async function POST(req: Request) {
       });
     }
 
+    // 🔍 validar DNI duplicado
     const existingParticipant = await promoterRef
       .collection("participants")
       .where("dni", "==", dni)
@@ -77,33 +76,30 @@ export async function POST(req: Request) {
 
     const raffleNumber = await generateUniqueNumber();
 
+    // 👤 guardar participante
     await promoterRef.collection("participants").add({
       name,
       dni,
+      edad,
       email: email || "",
       phone: phone || "",
       raffleNumber,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
+    // ➕ sumar participante al promotor
     await promoterRef.update({
       totalParticipants: admin.firestore.FieldValue.increment(1),
     });
 
-    // 📧 ENVIAR EMAIL
+    // 📧 cola de email
     if (email) {
-      await resend.emails.send({
-        from: "Sorteo <onboarding@resend.dev>",
-        to: email,
-        subject: "🎉 Confirmación de Registro - Sorteo",
-        html: `
-          <h2>Hola ${name} 👋</h2>
-          <p>Tu registro fue exitoso.</p>
-          <p><strong>Número de sorteo:</strong> ${raffleNumber}</p>
-          <p>Promotor: ${sellerName}</p>
-          <br/>
-          <p>¡Mucha suerte! 🍀</p>
-        `,
+      await db.collection("emailQueue").add({
+        email,
+        name,
+        raffleNumber,
+        status: "pending",
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
     }
 
@@ -113,11 +109,13 @@ export async function POST(req: Request) {
     });
 
   } catch (error) {
+
     console.error("ERROR REGISTER:", error);
 
     return NextResponse.json({
       success: false,
       error: "Error en el servidor",
     });
+
   }
 }

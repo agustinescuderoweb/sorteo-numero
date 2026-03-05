@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import * as XLSX from "xlsx";
 
 type Promoter = {
   id: string;
@@ -20,6 +21,23 @@ export default function PromotersPage() {
       });
   }, []);
 
+  const descargarExcel = () => {
+    const dataFormateada = promoters.map((p) => ({
+      DNI: p.id,
+      "Total Participantes": p.totalParticipants || 0,
+      Estado:
+        (p.totalParticipants || 0) > 0
+          ? "Activo"
+          : "Sin participantes",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataFormateada);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Promotores");
+
+    XLSX.writeFile(workbook, "promotores.xlsx");
+  };
+
   if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-500">
@@ -30,9 +48,18 @@ export default function PromotersPage() {
   return (
     <div className="flex justify-center min-h-screen bg-gray-50 p-10">
       <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-2xl p-8">
-        <h1 className="text-3xl font-bold mb-6 text-gray-800">
-          Promotores Registrados
-        </h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-800">
+            Promotores Registrados
+          </h1>
+
+          <button
+            onClick={descargarExcel}
+            className="w-40 bg-black text-white px-4 py-2 rounded-lg hover:opacity-80 transition m-5"
+          >
+            Descargar Excel
+          </button>
+        </div>
 
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
@@ -46,7 +73,7 @@ export default function PromotersPage() {
               </tr>
             </thead>
             <tbody>
-              {promoters.map((promoter, index) => (
+              {promoters.map((promoter) => (
                 <tr
                   key={promoter.id}
                   className="border-b hover:bg-gray-50 transition"
